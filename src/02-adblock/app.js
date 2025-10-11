@@ -4,7 +4,12 @@
 // @version      2.0
 // @description  Universal Adblock Plus rules parser and converter
 // @author       wkyuu
-// @match        *://*/*
+// @match        https://github.com/*
+// @match        https://taobao.com/*
+// @match        https://jd.com/*
+// @match        https://zhipin.com/*
+// @match        https://douban.com/*
+// @match        https://xueqiu.com/*
 // @grant        none
 // ==/UserScript==
 
@@ -40,7 +45,8 @@
 		'jd.com##div.umc-equity',
 		'zhipin.com##div.dialog-wrap.dialog-account-safe',
 		'douban.com##div.ui-overlay-mask',
-		'xueqiu.com##div.modals.dimmer.js-shown'
+		'xueqiu.com##div.modals.dimmer.js-shown',
+		'xueqiu.com##footer[id="footer_footer_2F1"]'
 	];
 
 	// Adblock Plus rule parser
