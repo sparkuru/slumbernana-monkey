@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Zhihu Optimization
 // @namespace    http://tampermonkey.net/
-// @version      0.1.1b
+// @version      0.2.1b
 // @description  Zhihu Optimization
 // @author       wkyuu
 // @match        https://zhihu.com/*
@@ -11,6 +11,9 @@
 
 (function () {
 	'use strict';
+
+	const container_width = '100%';
+	const main_column_width = '80%';
 
 	function removeElementByTestId(testId) {
 		const element = document.querySelector(`[data-testid="${testId}"]`);
@@ -38,12 +41,20 @@
 		const style = document.createElement('style');
 		style.textContent = `
 			.Search-container {
-				width: 100% !important;
+				width: ${container_width} !important;
 				justify-content: center !important;
 				max-width: none !important;
 			}
 			.SearchMain {
-				width: 80% !important;
+				width: ${main_column_width} !important;
+			}
+			.Topstory-container {
+				width: ${container_width} !important;
+				justify-content: center !important;
+				max-width: none !important;
+			}
+			.Topstory-mainColumn {
+				width: ${main_column_width} !important;
 			}
 		`;
 		document.head.appendChild(style);
@@ -52,7 +63,7 @@
 	function modifySearchContainer() {
 		const searchContainer = document.querySelector('.Search-container');
 		if (searchContainer) {
-			searchContainer.style.setProperty('width', '100%', 'important');
+			searchContainer.style.setProperty('width', container_width, 'important');
 			searchContainer.style.setProperty('justify-content', 'center', 'important');
 			searchContainer.style.setProperty('max-width', 'none', 'important');
 		}
@@ -61,7 +72,30 @@
 	function modifySearchMain() {
 		const searchMain = document.querySelector('#SearchMain');
 		if (searchMain) {
-			searchMain.style.setProperty('width', '80%', 'important');
+			searchMain.style.setProperty('width', main_column_width, 'important');
+		}
+	}
+
+	function removeWriteAreaCard() {
+		const writeAreaCard = document.querySelector('.WriteArea.Card');
+		if (writeAreaCard) {
+			writeAreaCard.remove();
+		}
+	}
+
+	function modifyTopstoryContainer() {
+		const topstoryContainer = document.querySelector('.Topstory-container');
+		if (topstoryContainer) {
+			topstoryContainer.style.setProperty('width', container_width, 'important');
+			topstoryContainer.style.setProperty('justify-content', 'center', 'important');
+			topstoryContainer.style.setProperty('max-width', 'none', 'important');
+		}
+	}
+
+	function modifyTopstoryMainColumnCard() {
+		const topstoryMainColumnCard = document.querySelector('.Topstory-mainColumn');
+		if (topstoryMainColumnCard) {
+			topstoryMainColumnCard.style.setProperty('width', main_column_width, 'important');
 		}
 	}
 
@@ -88,6 +122,9 @@
 		removeElementByClass('SearchBar-askContainer');
 		removeElementByHref('https://www.zhihu.com/consult');
 		removeElementByHref('https://www.zhihu.com/education/learning');
+		removeWriteAreaCard();
+		modifyTopstoryContainer();
+		modifyTopstoryMainColumnCard();
 	}
 
 	function initializeOptimization() {
@@ -115,7 +152,10 @@
 							node.querySelector('a[href="https://zhida.zhihu.com/"]') ||
 							node.querySelector('.SearchBar-askContainer') ||
 							node.querySelector('a[href="https://www.zhihu.com/consult"]') ||
-							node.querySelector('a[href="https://www.zhihu.com/education/learning"]')
+							node.querySelector('a[href="https://www.zhihu.com/education/learning"]') ||
+							node.querySelector('.WriteArea.Card') ||
+							node.querySelector('.Topstory-container') ||
+							node.querySelector('.Topstory-mainColumn')
 						)) {
 							shouldOptimize = true;
 							break;
