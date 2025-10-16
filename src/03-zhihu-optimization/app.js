@@ -12,8 +12,8 @@
 (function () {
 	'use strict';
 
-	const container_width = '100%';
-	const main_column_width = '80%';
+	const container_width = '100vw';
+	const content_column_width = '80vw';
 
 	function removeElementByTestId(testId) {
 		const element = document.querySelector(`[data-testid="${testId}"]`);
@@ -46,7 +46,7 @@
 				max-width: none !important;
 			}
 			.SearchMain {
-				width: ${main_column_width} !important;
+				width: ${content_column_width} !important;
 			}
 			.Topstory-container {
 				width: ${container_width} !important;
@@ -54,7 +54,15 @@
 				max-width: none !important;
 			}
 			.Topstory-mainColumn {
-				width: ${main_column_width} !important;
+				width: ${content_column_width} !important;
+			}
+			.Question-main {
+				width: ${container_width} !important;
+				justify-content: center !important;
+				max-width: none !important;
+			}
+			.Question-mainColumn {
+				width: ${container_width} !important;
 			}
 		`;
 		document.head.appendChild(style);
@@ -72,7 +80,7 @@
 	function modifySearchMain() {
 		const searchMain = document.querySelector('#SearchMain');
 		if (searchMain) {
-			searchMain.style.setProperty('width', main_column_width, 'important');
+			searchMain.style.setProperty('width', content_column_width, 'important');
 		}
 	}
 
@@ -95,7 +103,23 @@
 	function modifyTopstoryMainColumnCard() {
 		const topstoryMainColumnCard = document.querySelector('.Topstory-mainColumn');
 		if (topstoryMainColumnCard) {
-			topstoryMainColumnCard.style.setProperty('width', main_column_width, 'important');
+			topstoryMainColumnCard.style.setProperty('width', content_column_width, 'important');
+		}
+	}
+
+	function modifyQuestionMain() {
+		const questionMain = document.querySelector('.Question-main');
+		if (questionMain) {
+			questionMain.style.setProperty('width', container_width, 'important');
+			questionMain.style.setProperty('justify-content', 'center', 'important');
+			questionMain.style.setProperty('max-width', 'none', 'important');
+		}
+	}
+
+	function modifyQuestionMainColumn() {
+		const questionMainColumn = document.querySelector('.Question-mainColumn');
+		if (questionMainColumn) {
+			questionMainColumn.style.setProperty('width', content_column_width, 'important');
 		}
 	}
 
@@ -125,6 +149,8 @@
 		removeWriteAreaCard();
 		modifyTopstoryContainer();
 		modifyTopstoryMainColumnCard();
+		modifyQuestionMain();
+		modifyQuestionMainColumn();
 	}
 
 	function initializeOptimization() {
