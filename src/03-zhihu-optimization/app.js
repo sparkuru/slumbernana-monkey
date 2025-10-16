@@ -2,16 +2,18 @@
 // @name         Zhihu Optimization
 // @namespace    http://tampermonkey.net/
 // @version      0.2.1b
-// @description  Zhihu Optimization
+// @description  去除掉知乎的一些无意义内容，优化界面显示效果
 // @author       wkyuu
 // @match        https://zhihu.com/*
 // @match        https://www.zhihu.com/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=zhihu.com
 // @grant        none
 // ==/UserScript==
 
 (function () {
 	'use strict';
 
+	const header_width = '80vw';
 	const container_width = '100vw';
 	const content_column_width = '80vw';
 
@@ -40,6 +42,11 @@
 	function injectCustomCSS() {
 		const style = document.createElement('style');
 		style.textContent = `
+			.AppHeader > div:first-child {
+				width: ${header_width} !important;
+				max-width: none !important;
+				margin: 0 auto !important;
+			}
 			.Search-container {
 				width: ${container_width} !important;
 				justify-content: center !important;
@@ -62,10 +69,22 @@
 				max-width: none !important;
 			}
 			.Question-mainColumn {
-				width: ${container_width} !important;
+				width: ${content_column_width} !important;
 			}
 		`;
 		document.head.appendChild(style);
+	}
+
+	function modifyAppHeader() {
+		const appHeader = document.querySelector('.AppHeader');
+		if (appHeader) {
+			const firstDiv = appHeader.querySelector('div:first-child');
+			if (firstDiv) {
+				firstDiv.style.setProperty('width', header_width, 'important');
+				firstDiv.style.setProperty('max-width', 'none', 'important');
+				firstDiv.style.setProperty('margin', '0 auto', 'important');
+			}
+		}
 	}
 
 	function modifySearchContainer() {
@@ -151,6 +170,7 @@
 		modifyTopstoryMainColumnCard();
 		modifyQuestionMain();
 		modifyQuestionMainColumn();
+		modifyAppHeader();
 	}
 
 	function initializeOptimization() {
@@ -181,7 +201,8 @@
 							node.querySelector('a[href="https://www.zhihu.com/education/learning"]') ||
 							node.querySelector('.WriteArea.Card') ||
 							node.querySelector('.Topstory-container') ||
-							node.querySelector('.Topstory-mainColumn')
+							node.querySelector('.Topstory-mainColumn') ||
+							node.querySelector('.AppHeader')
 						)) {
 							shouldOptimize = true;
 							break;

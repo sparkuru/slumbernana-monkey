@@ -35,18 +35,20 @@
 (function () {
     'use strict';
 
+    const width = '80vw';
+
     function adjustWidth() {
         const style = document.createElement('style');
         style.textContent = `
             .ui-infobar {
-                max-width: 80% !important;
+                max-width: ${width} !important;
             }
             .markdown-body {
-                max-width: 80% !important;
+                max-width: ${width} !important;
             }
             /* ensure other possible containers also use the same width */
             .container-fluid {
-                max-width: 80% !important;
+                max-width: ${width} !important;
             }
         `;
         document.head.appendChild(style);
