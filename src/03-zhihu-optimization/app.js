@@ -64,6 +64,9 @@
 			.Topstory-mainColumn {
 				width: ${CONTENT_COLUMN_WIDTH} !important;
 			}
+			.Container {
+				max-width: none !important;
+			}
 			.Question-main {
 				width: ${CONTAINER_WIDTH} !important;
 				justify-content: center !important;
@@ -142,6 +145,13 @@
 		}
 	}
 
+	function modifyContainer() {
+		const container = document.querySelector('.Container');
+		if (container) {
+			container.style.setProperty('max-width', 'none', 'important');
+		}
+	}
+
 	function modifyQuestionMain() {
 		const questionMain = document.querySelector('.Question-main');
 		if (questionMain) {
@@ -193,6 +203,7 @@
 		removeWriteAreaCard();
 		modifyTopstoryContainer();
 		modifyTopstoryMainColumnCard();
+		modifyContainer();
 		modifyQuestionMain();
 		modifyQuestionMainColumn();
 		modifyAppHeader();
