@@ -16,31 +16,29 @@
 (function () {
 	'use strict';
 
-	// Adblock Plus rules configuration
-	const adblockRules = [
-		// GitHub user blocking rules
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(cheezcharmer))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(Dimples1337))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(zaohmeing))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(zhaohmng-outlook-com))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(codin-stuffs))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(zpc1314521))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(b0LBwZ7r5HOeh6CBMuQIhVu3-s-random-fork))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(panbinibn))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(pxvr-official))',
-		'github.com#?#div.Box-sc-g0xbh4-0.flszRz:-abp-has(a:-abp-contains(cirosantilli))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(cheezcharmer))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(Dimples1337))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(zaohmeing))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(zhaohmng-outlook-com))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(codin-stuffs))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(zpc1314521))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(b0LBwZ7r5HOeh6CBMuQIhVu3-s-random-fork))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(panbinibn))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(pxvr-official))',
-		'github.com#?#div.Box-sc-g0xbh4-0.bmcJak:-abp-has(a:-abp-contains(cirosantilli))',
+	const title = "62in7e-0"
+	const keywords = [
+		"fXzjPH",
+		"eLyVAI"
+	]
 
-		// Ad blocking rules
+	const craps = [
+		"cheezcharmer",
+		"Dimples1337",
+		"zaohmeing",
+		"zhaohmng-outlook-com",
+		"codin-stuffs",
+		"zpc1314521",
+		"b0LBwZ7r5HOeh6CBMuQIhVu3-s-random-fork",
+		"panbinibn",
+		"pxvr-official",
+		"cirosantilli"
+	]
+
+	const githubRules = keywords.flatMap(keyword => 
+		craps.map(crap => `github.com#?#div.Box-sc-${title}.${keyword}:-abp-has(a:-abp-contains(${crap}))`)
+	)
+	const generalRules = [
 		'taobao.com##div[id="J_TBPC_POP_home"]',
 		'jd.com##div.umc-equity',
 		'zhipin.com##div.dialog-wrap.dialog-account-safe',
@@ -48,6 +46,7 @@
 		'xueqiu.com##div.modals.dimmer.js-shown',
 		'xueqiu.com##footer[id="footer_footer_2F1"]'
 	];
+	const allRules = [...githubRules, ...generalRules];
 
 	// Adblock Plus rule parser
 	class AdblockRuleParser {
@@ -250,7 +249,7 @@
 
 	// Initialize and run
 	const parser = new AdblockRuleParser();
-	const parsedRules = parser.parseAllRules(adblockRules);
+	const parsedRules = parser.parseAllRules(allRules);
 	const executor = new RuleExecutor(parsedRules);
 
 	// Main execution function
