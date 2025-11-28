@@ -40,6 +40,7 @@
 	)
 	const generalRules = [
 		'taobao.com##div[id="J_TBPC_POP_home"]',
+		'jd.com##div.custom-pop-tmpl-wrapper',
 		'jd.com##div.umc-equity',
 		'zhipin.com##div.dialog-wrap.dialog-account-safe',
 		'douban.com##div.ui-overlay-mask',
