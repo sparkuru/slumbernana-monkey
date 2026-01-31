@@ -4,8 +4,8 @@
 // @version      0.1
 // @description  因为 hedgedoc 在线协作时，其宽度自动限制为 758px，不太方便，所以自动将 HedgeDoc 主要容器宽度改为 80%
 // @author       wkyuu
-// 下面这个修改成希望修改的 self-host 域名
 // @match        https://md.majo.im/*
+// @match        http://localhost:9426/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=md.majo.im
 // @grant        none
 // ==/UserScript==

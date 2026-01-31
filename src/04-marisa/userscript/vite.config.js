@@ -7,7 +7,7 @@ export default defineConfig({
       entry: 'src/main.js',
       userscript: {
         name: 'marisa',
-        namespace: 'https://github.com/sparkuru/slumbernana-monkey',
+        namespace: 'https://github.com/sparkuru',
         version: '0.1.0',
         description: 'marisa - tampermonkey userscript for enhanced SyncTV features',
         author: 'sparkuru',
