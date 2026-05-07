@@ -28,7 +28,7 @@ marisa：不修改 SyncTV 源代码，通过 Tampermonkey 注入功能，单个 
         -   [ ] 在房间存在 admin+ 组员的情况下，在聊天栏发出信息，提醒 admin+ 删除
     -   [ ] 播放行为
         -   [ ] 只有在前台的情况下，播放视频时保持音频大小；页面在后台时，如果有一方播放了内容，则其他人自动静音
-    -   [ ] 获取更高高清度的哔哩哔哩视频链接？[参考](https://github.com/SocialSisterYi/bilibili-API-collect/docs/video/videostream_url.md)
-    -   [ ] 新增视频源；各自添加本地视频，匹配文件 hash
+        -   [ ] 获取更高高清度的哔哩哔哩视频链接？[参考](https://github.com/SocialSisterYi/bilibili-API-collect/docs/video/videostream_url.md)
+        -   [ ] 新增视频源；各自添加本地视频，匹配文件 hash
 -   插件联动
     -   [ ] 参考 "稍后再看" 功能；在哔哩哔哩页面中，右键将当前页面的视频 bv、title、url 等信息发送到 synctv server；在 synctv 的房间中，新增一个视频源选项，其内容是当前账号发送过的视频列表，点击即可添加，；鉴权采用 synctv 的 cookie？账密
