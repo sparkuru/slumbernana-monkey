@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Zhihu Greener
 // @namespace    http://tampermonkey.net/
-// @version      0.2.5
+// @version      0.2.8
 // @description  Remove unnecessary content and optimize Zhihu interface display
 // @author       wkyuu
 // @match        https://zhihu.com/*
@@ -18,6 +18,8 @@
 	const CONTAINER_WIDTH = '100vw';
 	const CONTENT_COLUMN_WIDTH = '80vw';
 	const STYLE_ID = 'zhihu-greener-style';
+	const ANSWER_ITEM_SELECTOR = '.ContentItem.AnswerItem, .AnswerItem[itemprop="answer"]';
+	const COPY_BUTTON_SELECTOR = '[data-zhihu-greener-copy-answer]';
 	const INLINE_ZHIDA_LINK_SELECTOR = [
 		'.RichContent a[href*="//zhida.zhihu.com"]',
 		'.RichText a[href*="//zhida.zhihu.com"]',
@@ -74,6 +76,7 @@
 	];
 	const WATCH_SELECTORS = [...new Set([
 		...REMOVAL_RULES.map(rule => rule.selector),
+		ANSWER_ITEM_SELECTOR,
 		INLINE_ZHIDA_LINK_SELECTOR,
 		...ZHIDA_MESSAGE_SELECTORS,
 		'[data-testid="Button:zhida_message_corner_mark_btn"]',
@@ -81,6 +84,7 @@
 	])];
 	let optimizeTimer = null;
 	let observer = null;
+	let copyHandlerInstalled = false;
 
 	function removeElementsBySelector(selector, closestSelector) {
 		document.querySelectorAll(selector).forEach(element => {
@@ -123,6 +127,35 @@
 		document.body.style.removeProperty('overflow');
 	}
 
+	function isEditableElement(element) {
+		return element && (
+			element.isContentEditable ||
+			element.matches('input, textarea, [contenteditable="true"]')
+		);
+	}
+
+	function removeCopyWatermark() {
+		if (copyHandlerInstalled) {
+			return;
+		}
+
+		copyHandlerInstalled = true;
+		document.addEventListener('copy', event => {
+			if (isEditableElement(document.activeElement)) {
+				return;
+			}
+
+			const selectedText = window.getSelection().toString();
+			if (!selectedText.trim()) {
+				return;
+			}
+
+			event.clipboardData.setData('text/plain', selectedText);
+			event.preventDefault();
+			event.stopImmediatePropagation();
+		}, true);
+	}
+
 	function injectCustomCSS() {
 		if (document.getElementById(STYLE_ID)) {
 			return;
@@ -147,6 +180,9 @@
 			.AppHeader-userInfo,
 			.SearchBar-askContainer {
 				display: none !important;
+			}
+			.ZhihuGreener-copyButton {
+				margin-left: 20px !important;
 			}
 			.Search-container {
 				width: ${CONTAINER_WIDTH} !important;
@@ -303,6 +339,103 @@
 		});
 	}
 
+	function getAnswerText(answerItem) {
+		const content = answerItem.querySelector(
+			'.RichText[itemprop="text"], [itemprop="text"].RichText, .RichContent-inner .RichText'
+		);
+		if (!content) {
+			return '';
+		}
+
+		return (content.innerText || content.textContent || '')
+			.replace(/[\u200B-\u200D\uFEFF]/g, '')
+			.replace(/\r\n?/g, '\n')
+			.replace(/[ \t]+\n/g, '\n')
+			.trim();
+	}
+
+	function fallbackCopyText(text) {
+		const textarea = document.createElement('textarea');
+		textarea.value = text;
+		textarea.setAttribute('readonly', '');
+		textarea.style.position = 'fixed';
+		textarea.style.top = '-10000px';
+		document.body.appendChild(textarea);
+		textarea.select();
+		document.execCommand('copy');
+		textarea.remove();
+	}
+
+	async function copyText(text) {
+		if (navigator.clipboard && window.isSecureContext) {
+			await navigator.clipboard.writeText(text);
+			return;
+		}
+
+		fallbackCopyText(text);
+	}
+
+	function showCopyButtonStatus(button, text) {
+		const originalText = button.dataset.originalText || button.textContent;
+		button.dataset.originalText = originalText;
+		button.textContent = text;
+		window.setTimeout(() => {
+			button.textContent = originalText;
+			button.disabled = false;
+		}, 1200);
+	}
+
+	async function copyAnswerText(event) {
+		event.preventDefault();
+		event.stopPropagation();
+
+		const button = event.currentTarget;
+		const answerItem = button.closest(ANSWER_ITEM_SELECTOR);
+		const answerText = answerItem ? getAnswerText(answerItem) : '';
+		if (!answerText) {
+			showCopyButtonStatus(button, '无正文');
+			return;
+		}
+
+		button.disabled = true;
+		try {
+			await copyText(answerText);
+			showCopyButtonStatus(button, '已复制');
+		} catch {
+			showCopyButtonStatus(button, '复制失败');
+		}
+	}
+
+	function createCopyButton() {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'Button ContentItem-action Button--plain Button--withLabel ZhihuGreener-copyButton';
+		button.dataset.zhihuGreenerCopyAnswer = 'true';
+		button.textContent = '复制';
+		button.addEventListener('click', copyAnswerText);
+		return button;
+	}
+
+	function getAnswerActionBar(answerItem) {
+		return answerItem.querySelector('.ContentItem-actions.RichContent-actions > .ContentItem-actions') ||
+			answerItem.querySelector('.RichContent > .ContentItem-actions > .ContentItem-actions') ||
+			answerItem.querySelector('.ContentItem-actions > .ContentItem-actions') ||
+			answerItem.querySelector('.ContentItem-actions');
+	}
+
+	function addAnswerCopyButtons() {
+		document.querySelectorAll(ANSWER_ITEM_SELECTOR).forEach(answerItem => {
+			if (answerItem.querySelector(COPY_BUTTON_SELECTOR)) {
+				return;
+			}
+
+			const actionBar = getAnswerActionBar(answerItem);
+			if (actionBar && actionBar.tagName !== 'BUTTON') {
+				actionBar.appendChild(createCopyButton());
+			}
+		});
+	}
+
 	function removeUnwantedElements() {
 		unwrapElementsBySelector(INLINE_ZHIDA_LINK_SELECTOR);
 		removeZhidaMessageBlocks();
@@ -323,6 +456,7 @@
 		modifyQuestionMainColumn();
 		modifyAppHeader();
 		modifyDynamicCssElements();
+		addAnswerCopyButtons();
 	}
 
 	function scheduleGreening() {
@@ -338,6 +472,7 @@
 
 	function initializeGreener() {
 		injectCustomCSS();
+		removeCopyWatermark();
 		greenZhihu();
 		startObserver();
 	}
