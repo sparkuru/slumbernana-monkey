@@ -35,7 +35,7 @@
 		"cirosantilli"
 	]
 
-	const githubRules = keywords.flatMap(keyword => 
+	const githubRules = keywords.flatMap(keyword =>
 		craps.map(crap => `github.com#?#div.Box-sc-${title}.${keyword}:-abp-has(a:-abp-contains(${crap}))`)
 	)
 	const generalRules = [
