@@ -17,7 +17,7 @@
 	const HEADER_WIDTH = '80vw';
 	const CONTAINER_WIDTH = '100vw';
 	const CONTENT_COLUMN_WIDTH = '80vw';
-	const ARTICLE_IMAGE_WIDTH = '60%';
+	const ARTICLE_IMAGE_WIDTH = '80%';
 	const NAV_SETTINGS_ID = 'zhihu-greener-nav-settings';
 	const NAV_SETTINGS_STORAGE_KEY = 'zhihu-greener-hidden-header-nav-items';
 	const HEADER_NAV_ITEMS = [
