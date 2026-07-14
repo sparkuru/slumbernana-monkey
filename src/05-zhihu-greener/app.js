@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Zhihu Greener
 // @namespace    http://tampermonkey.net/
-// @version      0.2.8
+// @version      0.4.0
 // @description  Remove unnecessary content and optimize Zhihu interface display
 // @author       wkyuu
 // @match        https://zhihu.com/*
@@ -17,6 +17,25 @@
 	const HEADER_WIDTH = '80vw';
 	const CONTAINER_WIDTH = '100vw';
 	const CONTENT_COLUMN_WIDTH = '80vw';
+	const ARTICLE_IMAGE_WIDTH = '60%';
+	const NAV_SETTINGS_ID = 'zhihu-greener-nav-settings';
+	const NAV_SETTINGS_STORAGE_KEY = 'zhihu-greener-hidden-header-nav-items';
+	const HEADER_NAV_ITEMS = [
+		{ key: 'follow', label: '关注' },
+		{ key: 'recommend', label: '推荐' },
+		{ key: 'hot', label: '热榜' },
+		{ key: 'column', label: '专栏' },
+		{ key: 'ring', label: '圈子' },
+		{ key: 'aiWorks', label: 'AI Works' },
+		{ key: 'story', label: '故事' }
+	];
+	const POST_LAYOUT_VARIABLES = {
+		'--app-max-width': CONTENT_COLUMN_WIDTH,
+		'--app-width': CONTENT_COLUMN_WIDTH,
+		'--container-width': CONTENT_COLUMN_WIDTH,
+		'--container-main-column-width': CONTENT_COLUMN_WIDTH,
+		'--right-sidebar-width': '0px'
+	};
 	const STYLE_ID = 'zhihu-greener-style';
 	const ANSWER_ITEM_SELECTOR = '.ContentItem.AnswerItem, .AnswerItem[itemprop="answer"]';
 	const COPY_BUTTON_SELECTOR = '[data-zhihu-greener-copy-answer]';
@@ -43,6 +62,9 @@
 		{ selector: '.Question-sideColumn' },
 		{ selector: '.Topstory-sideBar' },
 		{ selector: '.GlobalSideBar' },
+		{ selector: '.Post-Row-Content-right' },
+		{ selector: '.Post-SideBar' },
+		{ selector: '.Post-SideBarSticky' },
 		{ selector: '.Pc-Business-Card-PcTopFeedBanner' },
 		{ selector: '.Pc-Business-Card-PcRightBanner' },
 		{ selector: '.Pc-Business-Card-PcFeedAd' },
@@ -72,6 +94,13 @@
 		'.Container',
 		'.Question-main',
 		'.Question-mainColumn',
+		'.Post-Row-Content',
+		'.Post-Row-Content-left',
+		'.Post-Row-Content-left-article',
+		'.Post-Main.Post-NormalMain',
+		'.Post-RichTextContainer',
+		'.Post-content',
+		'.AppHeader nav a',
 		'.Post-Row-Content-left-article > div[class*="css-"]'
 	];
 	const WATCH_SELECTORS = [...new Set([
@@ -85,6 +114,24 @@
 	let optimizeTimer = null;
 	let observer = null;
 	let copyHandlerInstalled = false;
+	let hiddenHeaderNavItems = loadHiddenHeaderNavItems();
+
+	function loadHiddenHeaderNavItems() {
+		try {
+			const storedItems = JSON.parse(window.localStorage.getItem(NAV_SETTINGS_STORAGE_KEY));
+			return Array.isArray(storedItems) ? new Set(storedItems) : new Set();
+		} catch {
+			return new Set();
+		}
+	}
+
+	function saveHiddenHeaderNavItems() {
+		try {
+			window.localStorage.setItem(NAV_SETTINGS_STORAGE_KEY, JSON.stringify([...hiddenHeaderNavItems]));
+		} catch {
+			// Ignore unavailable browser storage; the current-page setting still works.
+		}
+	}
 
 	function removeElementsBySelector(selector, closestSelector) {
 		document.querySelectorAll(selector).forEach(element => {
@@ -164,6 +211,13 @@
 		const style = document.createElement('style');
 		style.id = STYLE_ID;
 		style.textContent = `
+			:root {
+				--app-max-width: ${CONTENT_COLUMN_WIDTH} !important;
+				--app-width: ${CONTENT_COLUMN_WIDTH} !important;
+				--container-width: ${CONTENT_COLUMN_WIDTH} !important;
+				--container-main-column-width: ${CONTENT_COLUMN_WIDTH} !important;
+				--right-sidebar-width: 0px !important;
+			}
 			body {
 				overflow-x: hidden !important;
 			}
@@ -183,6 +237,46 @@
 			}
 			.ZhihuGreener-copyButton {
 				margin-left: 20px !important;
+			}
+			.ZhihuGreener-hiddenHeaderNav {
+				display: none !important;
+			}
+			#${NAV_SETTINGS_ID} {
+				position: fixed;
+				right: 24px;
+				bottom: 24px;
+				z-index: 1000;
+				font-size: 14px;
+			}
+			#${NAV_SETTINGS_ID} button {
+				border: 0;
+				border-radius: 6px;
+				background: #1772f6;
+				color: #fff;
+				cursor: pointer;
+				padding: 8px 12px;
+			}
+			#${NAV_SETTINGS_ID} .ZhihuGreener-navPanel {
+				display: none;
+				position: absolute;
+				right: 0;
+				bottom: 42px;
+				width: 150px;
+				padding: 12px;
+				border-radius: 8px;
+				background: #fff;
+				box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+			}
+			#${NAV_SETTINGS_ID}.is-open .ZhihuGreener-navPanel {
+				display: block;
+			}
+			#${NAV_SETTINGS_ID} .ZhihuGreener-navPanel label {
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				padding: 4px 0;
+				color: #373a40;
+				cursor: pointer;
 			}
 			.Search-container {
 				width: ${CONTAINER_WIDTH} !important;
@@ -216,13 +310,57 @@
 				max-width: none !important;
 			}
 			.Post-Row-Content {
-				width: ${CONTAINER_WIDTH} !important;
+				width: ${CONTENT_COLUMN_WIDTH} !important;
+				max-width: none !important;
 				justify-content: center !important;
+				margin: 0 auto !important;
 			}
 			.Post-Row-Content-left {
-				width: ${CONTENT_COLUMN_WIDTH} !important;
-				justify-content: center !important;
+				width: 100% !important;
 				max-width: none !important;
+				margin: 0 auto !important;
+				padding-right: 0 !important;
+				box-sizing: border-box !important;
+			}
+			.Post-Row-Content-left-article,
+			.Post-Main.Post-NormalMain,
+			.Post-RichTextContainer {
+				width: 100% !important;
+				max-width: none !important;
+				margin-left: auto !important;
+				margin-right: auto !important;
+			}
+			.Post-content {
+				width: 100% !important;
+				min-width: 0 !important;
+			}
+			.Post-content > div:has(.Post-Main.Post-NormalMain) {
+				width: ${CONTENT_COLUMN_WIDTH} !important;
+				min-width: 0 !important;
+				max-width: none !important;
+				margin-left: auto !important;
+				margin-right: auto !important;
+			}
+			.Post-content > div:has(> .Post-Main.Post-NormalMain),
+			.Post-content > div:has(+ .Post-Main.Post-NormalMain),
+			.Post-content > div:has(+ .Post-Main.Post-NormalMain) > div {
+				width: 100% !important;
+				min-width: 0 !important;
+				max-width: none !important;
+			}
+			.Post-RichText figure {
+				display: flex !important;
+				justify-content: center !important;
+			}
+			.Post-RichText figure > img,
+			.Post-RichText img.content_image,
+			.Post-RichText img.origin_image {
+				display: block !important;
+				width: ${ARTICLE_IMAGE_WIDTH} !important;
+				max-width: ${ARTICLE_IMAGE_WIDTH} !important;
+				height: auto !important;
+				margin-left: auto !important;
+				margin-right: auto !important;
 			}
 			.Post-Author {
 				justify-content: space-between !important;
@@ -235,6 +373,9 @@
 			.Question-sideColumn,
 			.Topstory-sideBar,
 			.GlobalSideBar,
+			.Post-Row-Content-right,
+			.Post-SideBar,
+			.Post-SideBarSticky,
 			.Footer,
 			.Question-sideColumnFooter,
 			.Recommendations-Main,
@@ -271,6 +412,85 @@
 				firstDiv.style.setProperty('margin', '0 auto', 'important');
 			}
 		}
+	}
+
+	function applyHeaderNavVisibility() {
+		document.querySelectorAll('.AppHeader nav a').forEach(link => {
+			const item = HEADER_NAV_ITEMS.find(candidate => link.textContent.trim().startsWith(candidate.label));
+			if (item) {
+				link.classList.toggle('ZhihuGreener-hiddenHeaderNav', hiddenHeaderNavItems.has(item.key));
+			}
+		});
+	}
+
+	function createHeaderNavSettings() {
+		if (document.getElementById(NAV_SETTINGS_ID)) {
+			return;
+		}
+
+		const settings = document.createElement('div');
+		settings.id = NAV_SETTINGS_ID;
+		const toggleButton = document.createElement('button');
+		toggleButton.type = 'button';
+		toggleButton.textContent = '导航';
+		toggleButton.setAttribute('aria-expanded', 'false');
+
+		const panel = document.createElement('div');
+		panel.className = 'ZhihuGreener-navPanel';
+		const allItemsLabel = document.createElement('label');
+		const allItemsToggle = document.createElement('input');
+		allItemsToggle.type = 'checkbox';
+		allItemsLabel.append(allItemsToggle, '隐藏全部');
+		panel.appendChild(allItemsLabel);
+
+		const itemToggles = new Map();
+		HEADER_NAV_ITEMS.forEach(item => {
+			const label = document.createElement('label');
+			const checkbox = document.createElement('input');
+			checkbox.type = 'checkbox';
+			checkbox.dataset.headerNavItem = item.key;
+			label.append(checkbox, `隐藏「${item.label}」`);
+			panel.appendChild(label);
+			itemToggles.set(item.key, checkbox);
+		});
+
+		const render = () => {
+			itemToggles.forEach((checkbox, key) => {
+				checkbox.checked = hiddenHeaderNavItems.has(key);
+			});
+			allItemsToggle.checked = hiddenHeaderNavItems.size === HEADER_NAV_ITEMS.length;
+		};
+
+		toggleButton.addEventListener('click', () => {
+			const isOpen = settings.classList.toggle('is-open');
+			toggleButton.setAttribute('aria-expanded', String(isOpen));
+		});
+		allItemsToggle.addEventListener('change', () => {
+			hiddenHeaderNavItems = allItemsToggle.checked
+				? new Set(HEADER_NAV_ITEMS.map(item => item.key))
+				: new Set();
+			saveHiddenHeaderNavItems();
+			applyHeaderNavVisibility();
+			render();
+		});
+		panel.addEventListener('change', event => {
+			const checkbox = event.target;
+			if (!(checkbox instanceof HTMLInputElement) || !checkbox.dataset.headerNavItem) {
+				return;
+			}
+			if (checkbox.checked) {
+				hiddenHeaderNavItems.add(checkbox.dataset.headerNavItem);
+			} else {
+				hiddenHeaderNavItems.delete(checkbox.dataset.headerNavItem);
+			}
+			saveHiddenHeaderNavItems();
+			applyHeaderNavVisibility();
+			render();
+		});
+
+		settings.append(toggleButton, panel);
+		document.body.appendChild(settings);
+		render();
 	}
 
 	function modifySearchContainer() {
@@ -329,6 +549,61 @@
 			questionMainColumn.style.setProperty('width', CONTENT_COLUMN_WIDTH, 'important');
 			questionMainColumn.style.setProperty('max-width', 'none', 'important');
 		}
+	}
+
+	function modifyPostLayout() {
+		if (!document.body.classList.contains('PostIndex-body')) {
+			return;
+		}
+
+		Object.entries(POST_LAYOUT_VARIABLES).forEach(([name, value]) => {
+			document.documentElement.style.setProperty(name, value, 'important');
+		});
+
+		const postContent = document.querySelector('.Post-content');
+		if (postContent) {
+			postContent.style.setProperty('width', '100%', 'important');
+			postContent.style.setProperty('min-width', '0', 'important');
+		}
+
+		const postMain = document.querySelector('.Post-Main.Post-NormalMain');
+		if (!postMain) {
+			return;
+		}
+
+		const postColumn = postMain.parentElement;
+		const postLayout = postColumn && postColumn.parentElement;
+		if (postLayout) {
+			postLayout.style.setProperty('width', CONTENT_COLUMN_WIDTH, 'important');
+			postLayout.style.setProperty('min-width', '0', 'important');
+			postLayout.style.setProperty('max-width', 'none', 'important');
+			postLayout.style.setProperty('margin-left', 'auto', 'important');
+			postLayout.style.setProperty('margin-right', 'auto', 'important');
+		}
+		if (postColumn) {
+			postColumn.style.setProperty('width', '100%', 'important');
+			postColumn.style.setProperty('min-width', '0', 'important');
+			postColumn.style.setProperty('max-width', 'none', 'important');
+		}
+
+		const titleImageContainer = postMain.previousElementSibling;
+		if (titleImageContainer) {
+			titleImageContainer.style.setProperty('width', ARTICLE_IMAGE_WIDTH, 'important');
+			titleImageContainer.style.setProperty('max-width', 'none', 'important');
+			titleImageContainer.style.setProperty('margin-left', 'auto', 'important');
+			titleImageContainer.style.setProperty('margin-right', 'auto', 'important');
+			Array.from(titleImageContainer.children).forEach(element => {
+				element.style.setProperty('width', '100%', 'important');
+				element.style.setProperty('max-width', 'none', 'important');
+			});
+		}
+
+		document.querySelectorAll('.Post-Main.Post-NormalMain, .Post-RichTextContainer').forEach(element => {
+			element.style.setProperty('width', '100%', 'important');
+			element.style.setProperty('max-width', 'none', 'important');
+			element.style.setProperty('margin-left', 'auto', 'important');
+			element.style.setProperty('margin-right', 'auto', 'important');
+		});
 	}
 
 	function modifyDynamicCssElements() {
@@ -454,7 +729,10 @@
 		modifyContainer();
 		modifyQuestionMain();
 		modifyQuestionMainColumn();
+		modifyPostLayout();
 		modifyAppHeader();
+		applyHeaderNavVisibility();
+		createHeaderNavSettings();
 		modifyDynamicCssElements();
 		addAnswerCopyButtons();
 	}
