@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Zhihu Greener
 // @namespace    http://tampermonkey.net/
-// @version      0.4.0
+// @version      0.4.2
 // @description  Remove unnecessary content and optimize Zhihu interface display
 // @author       wkyuu
 // @match        https://zhihu.com/*
@@ -51,6 +51,10 @@
 	const REMOVAL_RULES = [
 		{ selector: '.AppHeader-TabsLink[href*="//zhida.zhihu.com"]' },
 		{ selector: '.AppHeader a[href="https://zhida.zhihu.com/"]' },
+		{ selector: '.AppHeader a[href*="//zhida.zhihu.com"]' },
+		{ selector: 'li[aria-controls="Search-zhida"]' },
+		{ selector: 'a:has(.ZDI--ZhidaLogo24)' },
+		{ selector: 'a[href*="type=zhida"]', closest: 'li' },
 		{ selector: '[aria-label="边栏锚点"]', closest: 'div' },
 		{ selector: 'a[href="https://www.zhihu.com/consult"]' },
 		{ selector: 'a[href*="/consult"]' },
@@ -227,6 +231,10 @@
 				margin: 0 auto !important;
 			}
 			.AppHeader-TabsLink[href*="//zhida.zhihu.com"],
+			.AppHeader a[href*="//zhida.zhihu.com"],
+			li[aria-controls="Search-zhida"],
+			a:has(.ZDI--ZhidaLogo24),
+			li:has(a[href*="type=zhida"]),
 			.AppHeader-TabsLink[href*="/consult"],
 			.AppHeader-TabsLink[href*="/education/learning"],
 			.AppHeader-notifications,
@@ -348,13 +356,17 @@
 				min-width: 0 !important;
 				max-width: none !important;
 			}
-			.Post-RichText figure {
+			.Post-RichText figure,
+			.RichContent figure {
 				display: flex !important;
 				justify-content: center !important;
 			}
 			.Post-RichText figure > img,
+			.RichContent figure > img,
 			.Post-RichText img.content_image,
-			.Post-RichText img.origin_image {
+			.Post-RichText img.origin_image,
+			.RichContent img.content_image,
+			.RichContent img.origin_image {
 				display: block !important;
 				width: ${ARTICLE_IMAGE_WIDTH} !important;
 				max-width: ${ARTICLE_IMAGE_WIDTH} !important;
@@ -767,6 +779,11 @@
 		observer = new MutationObserver(function (mutations) {
 			let shouldOptimize = false;
 			mutations.forEach(function (mutation) {
+				if (mutation.type === 'attributes' && nodeContainsWatchedSelector(mutation.target)) {
+					shouldOptimize = true;
+					return;
+				}
+
 				if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
 					for (let node of mutation.addedNodes) {
 						if (node.nodeType === Node.ELEMENT_NODE && nodeContainsWatchedSelector(node)) {
@@ -784,7 +801,9 @@
 
 		observer.observe(document.body, {
 			childList: true,
-			subtree: true
+			subtree: true,
+			attributes: true,
+			attributeFilter: ['aria-controls', 'class', 'data-testid', 'href']
 		});
 	}
 
