@@ -26,6 +26,7 @@
 	const SEARCH_PATH_PATTERN = /^\/search$/i;
 	const CUSTOMER_SERVICE_ENTRY_SELECTOR = '[data-name="webww2"]';
 	const CUSTOMER_SERVICE_URL = 'https://market.m.taobao.com/app/im/chat/index.html';
+	const SHARE_BUTTON_ID = 'taobao-greener-share';
 	const SEARCH_KEEP_PARAMS = [
 		'q',
 		'page',
@@ -59,10 +60,12 @@
 		'.jipiao-entry',
 		'.site-nav-bd-r .site-nav-pipe',
 		'.J_SiteNavLogin',
-		'.J_TbLazyload[data-ks-lazyload-custom]'
+		'.J_TbLazyload[data-ks-lazyload-custom]',
+		'[data-name="copyUrl"]'
 	];
 	let cleanupTimer = null;
 	let normalizeTimer = null;
+	let resetShareButtonTimer = null;
 	let observer = null;
 
 	function buildCleanItemUrl(origin, id, skuId) {
@@ -231,6 +234,96 @@
 		window.location.assign(url);
 	}
 
+	function getItemTitle() {
+		const itemTitle = window.__ICE_APP_CONTEXT__?.loaderData?.home?.data?.res?.item?.title || document.title;
+		const title = itemTitle.replace(/\s*[-_|]\s*(淘宝网|淘宝|天猫).*$/u, '').trim();
+		return title || '淘宝商品';
+	}
+
+	async function copyToClipboard(text) {
+		if (navigator.clipboard?.writeText) {
+			await navigator.clipboard.writeText(text);
+			return;
+		}
+
+		const textarea = document.createElement('textarea');
+		textarea.value = text;
+		textarea.setAttribute('readonly', '');
+		textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+		document.body.appendChild(textarea);
+		textarea.select();
+		const copied = document.execCommand('copy');
+		textarea.remove();
+		if (!copied) {
+			throw new Error('Clipboard copy failed');
+		}
+	}
+
+	function setShareButtonState(state) {
+		const button = document.getElementById(SHARE_BUTTON_ID);
+		if (!(button instanceof HTMLButtonElement)) {
+			return;
+		}
+
+		const labels = {
+			default: '复制商品链接',
+			copied: '链接已复制',
+			failed: '复制失败'
+		};
+		button.dataset.state = state;
+		button.setAttribute('aria-label', labels[state]);
+		button.title = labels[state];
+	}
+
+	function copyItemShareLink(event) {
+		event.preventDefault();
+		event.stopPropagation();
+		const shareText = `${getItemTitle()}\n${getCleanUrl(window.location.href)}`;
+		copyToClipboard(shareText)
+			.then(() => setShareButtonState('copied'))
+			.catch(() => setShareButtonState('failed'))
+			.finally(() => {
+				window.clearTimeout(resetShareButtonTimer);
+				resetShareButtonTimer = window.setTimeout(() => setShareButtonState('default'), 1600);
+			});
+	}
+
+	function matchNativeToolbarItemSize(button, toolbarItem) {
+		const { width, height } = toolbarItem.getBoundingClientRect();
+		if (width <= 0 || height <= 0) {
+			return;
+		}
+
+		button.style.flexBasis = `${height}px`;
+		button.style.height = `${height}px`;
+		button.style.width = `${width}px`;
+	}
+
+	function installShareButton() {
+		if (!isItemDetailUrl(window.location.href) || document.getElementById(SHARE_BUTTON_ID)) {
+			return;
+		}
+
+		const anchor = document.querySelector('[data-name="qrcode"], [data-name="webww2"], [data-name="wangwang"]');
+		const toolbar = document.querySelector('.tb-toolkit, .tb-toolkit-new');
+		if (!anchor && !toolbar) {
+			return;
+		}
+
+		const button = document.createElement('button');
+		button.id = SHARE_BUTTON_ID;
+		button.type = 'button';
+		button.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 5l5 5-5 5M19 10H9a4 4 0 0 0-4 4v5"/></svg><span>分享</span>';
+		button.addEventListener('click', copyItemShareLink);
+		if (anchor) {
+			matchNativeToolbarItemSize(button, anchor);
+			anchor.insertAdjacentElement('afterend', button);
+		} else {
+			toolbar.appendChild(button);
+		}
+		setShareButtonState('default');
+	}
+
 	function normalizeAddressBar() {
 		const cleanUrl = getCleanUrl(window.location.href);
 		if (cleanUrl === window.location.href) {
@@ -327,6 +420,73 @@
 			body {
 				overflow-x: hidden !important;
 			}
+
+			#${SHARE_BUTTON_ID} {
+				align-items: center;
+				appearance: none;
+				background: transparent;
+				border: 0;
+				color: #666;
+				cursor: pointer;
+				display: flex;
+				flex: 0 0 64px;
+				flex-direction: column;
+				font: 12px/16px Arial, sans-serif;
+				height: 64px;
+				justify-content: center;
+				padding: 0;
+				position: relative;
+				transition: color 160ms ease;
+				width: 56px;
+			}
+
+			#${SHARE_BUTTON_ID} svg {
+				height: 24px;
+				fill: none;
+				margin-bottom: 4px;
+				stroke: currentColor;
+				stroke-linecap: round;
+				stroke-linejoin: round;
+				stroke-width: 1.8;
+				width: 24px;
+			}
+
+			#${SHARE_BUTTON_ID}:hover {
+				color: #ff5000;
+			}
+
+			#${SHARE_BUTTON_ID}::after {
+				background: #1f1f1f;
+				border-radius: 6px;
+				color: #fff;
+				content: attr(aria-label);
+				font-size: 12px;
+				line-height: 1;
+				opacity: 0;
+				padding: 7px 8px;
+				pointer-events: none;
+				position: absolute;
+				right: calc(100% + 8px);
+				top: 50%;
+				transform: translate(4px, -50%);
+				transition: opacity 160ms ease, transform 160ms ease;
+				white-space: nowrap;
+			}
+
+			#${SHARE_BUTTON_ID}:hover::after,
+			#${SHARE_BUTTON_ID}[data-state="copied"]::after,
+			#${SHARE_BUTTON_ID}[data-state="failed"]::after {
+				opacity: 1;
+				transform: translate(0, -50%);
+			}
+
+			#${SHARE_BUTTON_ID}[data-state="copied"] {
+				color: #198754;
+			}
+
+			#${SHARE_BUTTON_ID}[data-state="failed"] {
+				color: #e1251b;
+			}
 		`;
 		document.head.appendChild(style);
 	}
@@ -356,6 +516,7 @@
 		normalizeLinks();
 		removeElements();
 		removeFixedQrPopups();
+		installShareButton();
 	}
 
 	function scheduleCleanup() {
