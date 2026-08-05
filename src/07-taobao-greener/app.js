@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Taobao Greener
 // @namespace    http://tampermonkey.net/
-// @version      0.1.9
+// @version      0.2.0
 // @description  Clean Taobao item URLs and remove floating promotions, popups, and ad containers
 // @author       wkyuu
 // @match        https://taobao.com/*
@@ -24,6 +24,8 @@
 	const SIMBA_CLICK_HOST_PATTERN = /^click(?:\.[a-z0-9-]+)*\.simba\.taobao\.com$/i;
 	const SIMBA_CLICK_PATH_PATTERN = /^\/(?:cc_im|necpm)$/i;
 	const SEARCH_PATH_PATTERN = /^\/search$/i;
+	const CUSTOMER_SERVICE_ENTRY_SELECTOR = '[data-name="webww2"]';
+	const CUSTOMER_SERVICE_URL = 'https://market.m.taobao.com/app/im/chat/index.html';
 	const SEARCH_KEEP_PARAMS = [
 		'q',
 		'page',
@@ -34,7 +36,6 @@
 		'spm'
 	];
 	const DETAIL_CLEAN_DELAY_MS = 3000;
-	const MODAL_NAME_PATTERN = /(^|[-_])(dialog|float|layer|mask|modal|overlay|pop|popup)([-_]|$)/i;
 	const STYLE_ID = 'taobao-greener-style';
 	const REMOVAL_SELECTORS = [
 		'#J_TBPC_POP_home',
@@ -56,9 +57,7 @@
 		'iframe[src*="alimama.com"]',
 		'.tb-live-entry',
 		'.jipiao-entry',
-		'.ww-light',
 		'.site-nav-bd-r .site-nav-pipe',
-		'.mui-mbar',
 		'.J_SiteNavLogin',
 		'.J_TbLazyload[data-ks-lazyload-custom]'
 	];
@@ -170,6 +169,68 @@
 		}
 	}
 
+	function getCustomerServiceContext() {
+		const itemData = window.__ICE_APP_CONTEXT__?.loaderData?.home?.data?.res;
+		const trigger = document.querySelector('#aliww-click-trigger, #aliww-click-trigger-new');
+		const itemId = itemData?.item?.itemId || trigger?.dataset.item || getNestedSearchParam(new URL(window.location.href), 'id');
+		const encryptUid = itemData?.seller?.encryptUid || trigger?.dataset.encryptuid;
+
+		if (!ITEM_ID_PATTERN.test(itemId || '') || !encryptUid) {
+			return null;
+		}
+
+		return { itemId, encryptUid };
+	}
+
+	function getCustomerServiceUrl() {
+		const context = getCustomerServiceContext();
+		if (!context) {
+			return null;
+		}
+
+		const url = new URL(CUSTOMER_SERVICE_URL);
+		url.searchParams.set('gid', context.itemId);
+		url.searchParams.set('encryptUid', context.encryptUid);
+		url.searchParams.set('bizType', '11001');
+		url.searchParams.set('extraParams', JSON.stringify({
+			pageSource: 'taobao_pc',
+			itemId: context.itemId,
+			extParams: {}
+		}));
+		url.searchParams.set('sceneParams', JSON.stringify({
+			source: 'light',
+			pageSource: 'taobao_pc',
+			toRole: 'seller'
+		}));
+		url.searchParams.set('type', 'PC_WEB');
+		url.hash = '/';
+		return url.href;
+	}
+
+	function openCustomerService(event) {
+		if (!event.isTrusted) {
+			return;
+		}
+
+		const target = event.target;
+		const element = target instanceof Element ? target : target?.parentElement;
+		const entry = element?.closest(CUSTOMER_SERVICE_ENTRY_SELECTOR);
+		const url = entry && getCustomerServiceUrl();
+		if (!url) {
+			return;
+		}
+
+		event.preventDefault();
+		event.stopImmediatePropagation();
+		const chatWindow = window.open(url, '_blank');
+		if (chatWindow) {
+			chatWindow.opener = null;
+			return;
+		}
+
+		window.location.assign(url);
+	}
+
 	function normalizeAddressBar() {
 		const cleanUrl = getCleanUrl(window.location.href);
 		if (cleanUrl === window.location.href) {
@@ -248,6 +309,7 @@
 		['pointerdown', 'mousedown', 'click'].forEach(eventName => {
 			document.addEventListener(eventName, normalizeEventLink, true);
 		});
+		document.addEventListener('click', openCustomerService, true);
 	}
 
 	function injectStyle() {
@@ -290,29 +352,10 @@
 		});
 	}
 
-	function isModalLikeOverlay(element) {
-		const signature = `${element.id} ${element.className}`;
-		return element.getAttribute('role') === 'dialog'
-			|| element.getAttribute('aria-modal') === 'true'
-			|| MODAL_NAME_PATTERN.test(signature);
-	}
-
-	function removeModalLikeOverlays() {
-		document.querySelectorAll('body > div, body > section').forEach(element => {
-			const rect = element.getBoundingClientRect();
-			const coversPage = rect.width >= window.innerWidth * 0.5 && rect.height >= window.innerHeight * 0.25;
-
-			if (isHighFixedLayer(element) && coversPage && isModalLikeOverlay(element)) {
-				element.remove();
-			}
-		});
-	}
-
 	function cleanup() {
 		normalizeLinks();
 		removeElements();
 		removeFixedQrPopups();
-		removeModalLikeOverlays();
 	}
 
 	function scheduleCleanup() {
