@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Taobao Greener
 // @namespace    http://tampermonkey.net/
-// @version      0.2.0
+// @version      0.2.1
 // @description  Clean Taobao item URLs and remove floating promotions, popups, and ad containers
 // @author       wkyuu
 // @match        https://taobao.com/*
@@ -93,6 +93,29 @@
 		return null;
 	}
 
+	function getRawSearchParam(url, paramName) {
+		for (const param of url.search.slice(1).split('&')) {
+			const separatorIndex = param.indexOf('=');
+			if (separatorIndex < 0) {
+				continue;
+			}
+
+			try {
+				if (decodeURIComponent(param.slice(0, separatorIndex)) === paramName) {
+					return param.slice(separatorIndex + 1);
+				}
+			} catch {
+				continue;
+			}
+		}
+
+		return null;
+	}
+
+	function buildShopSearchUrl(encodedShopName) {
+		return `https://shopsearch.taobao.com/search?app=shopsearch&q=${encodedShopName}`;
+	}
+
 	function getCleanSearchUrl(url) {
 		const cleanUrl = new URL(url.origin + url.pathname);
 		SEARCH_KEEP_PARAMS.forEach(param => {
@@ -130,6 +153,7 @@
 
 		const id = getNestedSearchParam(url, 'id');
 		const skuId = getNestedSearchParam(url, 'skuId');
+		const encodedShopName = getRawSearchParam(url, 'p');
 		const isTaobaoSearchPage = url.hostname === 's.taobao.com' && SEARCH_PATH_PATTERN.test(url.pathname);
 		const isTaobaoItemPage = url.hostname === 'item.taobao.com' && ITEM_PATH_PATTERN.test(url.pathname);
 		const isTmallItemPage = url.hostname === 'detail.tmall.com' && ITEM_PATH_PATTERN.test(url.pathname);
@@ -150,6 +174,10 @@
 			if (isSimbaClick) {
 				return buildCleanItemUrl('https://item.taobao.com', id, skuId);
 			}
+		}
+
+		if (isSimbaClick && !id && encodedShopName) {
+			return buildShopSearchUrl(encodedShopName);
 		}
 
 		if (isTmallHost) {
