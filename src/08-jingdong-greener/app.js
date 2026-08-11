@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Jingdong Greener
 // @namespace    http://tampermonkey.net/
-// @version      0.1.1
-// @description  Clean Jingdong item URLs and remove floating promotions, coupon prompts, and ad containers
+// @version      0.1.2
+// @description  Clean Jingdong URLs and remove floating promotions, coupon prompts, and ad containers
 // @author       wkyuu
 // @match        https://jd.com/*
 // @match        https://*.jd.com/*
@@ -47,7 +47,10 @@
 		'iframe[src*="ad"]'
 	];
 	const ITEM_HOST = 'item.jd.com';
+	const SEARCH_HOST = 'search.jd.com';
+	const SEARCH_PATH_PATTERN = /^\/Search$/i;
 	const PRODUCT_TRACKING_PARAMS = new Set(['pcdk', 'spmtag', 'rid', 'cu']);
+	const SEARCH_TRACKING_PARAMS = new Set(['enc', 'pvid', 'themecolor', 'from', 'spmtag', 'wq']);
 	let cleanupTimer = null;
 	let normalizeTimer = null;
 	let resetShareButtonTimer = null;
@@ -56,11 +59,23 @@
 	function getCleanUrl(urlText) {
 		try {
 			const url = new URL(urlText, window.location.origin);
+			const hostname = url.hostname.toLowerCase();
 
-			if (url.hostname.toLowerCase() === ITEM_HOST) {
+			if (hostname === ITEM_HOST) {
 				[...url.searchParams.keys()].forEach(parameter => {
 					const normalizedParameter = parameter.toLowerCase();
 					if (PRODUCT_TRACKING_PARAMS.has(normalizedParameter) || normalizedParameter.startsWith('utm_')) {
+						url.searchParams.delete(parameter);
+					}
+				});
+
+				return url.href;
+			}
+
+			if (hostname === SEARCH_HOST && SEARCH_PATH_PATTERN.test(url.pathname)) {
+				[...url.searchParams.keys()].forEach(parameter => {
+					const normalizedParameter = parameter.toLowerCase();
+					if (SEARCH_TRACKING_PARAMS.has(normalizedParameter) || normalizedParameter.startsWith('utm_')) {
 						url.searchParams.delete(parameter);
 					}
 				});
