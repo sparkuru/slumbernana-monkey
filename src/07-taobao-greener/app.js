@@ -38,6 +38,7 @@
 	];
 	const DETAIL_CLEAN_DELAY_MS = 3000;
 	const STYLE_ID = 'taobao-greener-style';
+	const SKU_DECISION_SELECTOR = '[class^="SKUDecision--"], [class*=" SKUDecision--"]';
 	const REMOVAL_SELECTORS = [
 		'#J_TBPC_POP_home',
 		'#J_TBPC_POP_detail',
@@ -519,6 +520,10 @@
 		document.head.appendChild(style);
 	}
 
+	function removeSkuDecision() {
+		document.querySelectorAll(SKU_DECISION_SELECTOR).forEach(element => element.remove());
+	}
+
 	function removeElements() {
 		REMOVAL_SELECTORS.forEach(selector => {
 			document.querySelectorAll(selector).forEach(element => element.remove());
@@ -542,6 +547,7 @@
 
 	function cleanup() {
 		normalizeLinks();
+		removeSkuDecision();
 		removeElements();
 		removeFixedQrPopups();
 		installShareButton();
@@ -564,12 +570,14 @@
 		}
 
 		observer = new MutationObserver(mutations => {
-			if (mutations.some(mutation => mutation.addedNodes.length > 0)) {
+			if (mutations.some(mutation => mutation.addedNodes.length > 0 || mutation.attributeName === 'class')) {
 				scheduleCleanup();
 			}
 		});
 
 		observer.observe(document.body, {
+			attributes: true,
+			attributeFilter: ['class'],
 			childList: true,
 			subtree: true
 		});
