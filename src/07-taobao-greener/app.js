@@ -41,6 +41,7 @@
 	const SKU_DECISION_SELECTOR = '[class^="SKUDecision--"], [class*=" SKUDecision--"]';
 	const REMOVAL_SELECTORS = [
 		'#J_TBPC_POP_home',
+		'#J_TBPC_POP_home_tmall',
 		'#J_TBPC_POP_detail',
 		'.custom-pop-tmpl-wrapper',
 		'[id^="qr"][name^="exist-"]',
