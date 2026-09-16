@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Zhihu Greener
 // @namespace    http://tampermonkey.net/
-// @version      0.4.2
+// @version      0.4.5
 // @description  Remove unnecessary content and optimize Zhihu interface display
 // @author       wkyuu
 // @match        https://zhihu.com/*
@@ -17,6 +17,9 @@
 	const HEADER_WIDTH = '80vw';
 	const CONTAINER_WIDTH = '100vw';
 	const CONTENT_COLUMN_WIDTH = '80vw';
+	const PROFILE_LAYOUT_WIDTH = CONTENT_COLUMN_WIDTH;
+	const COLUMN_LAYOUT_CLASS = 'ZhihuGreener-columnPage';
+	const COLUMN_LAYOUT_WIDTH = CONTENT_COLUMN_WIDTH;
 	const ARTICLE_IMAGE_WIDTH = '80%';
 	const NAV_SETTINGS_ID = 'zhihu-greener-nav-settings';
 	const NAV_SETTINGS_STORAGE_KEY = 'zhihu-greener-hidden-header-nav-items';
@@ -98,6 +101,12 @@
 		'.Container',
 		'.Question-main',
 		'.Question-mainColumn',
+		'.ProfileHeader',
+		'.Profile-main',
+		'.Profile-mainColumn',
+		'.App-main',
+		'.ContentItem',
+		'.Column-ColumnItem',
 		'.Post-Row-Content',
 		'.Post-Row-Content-left',
 		'.Post-Row-Content-left-article',
@@ -315,6 +324,28 @@
 			}
 			.Question-mainColumn {
 				width: ${CONTENT_COLUMN_WIDTH} !important;
+				max-width: none !important;
+			}
+			.ProfileHeader,
+			.Profile-main {
+				width: ${PROFILE_LAYOUT_WIDTH} !important;
+				max-width: none !important;
+			}
+			.Profile-mainColumn {
+				width: 100% !important;
+				max-width: none !important;
+			}
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > .Card > div:first-of-type,
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(2) > div:nth-of-type(2),
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(3),
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(3) > div,
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(3) > section,
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(3) > ul,
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(3) > ol,
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(3) .ContentItem,
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(3) .Column-ColumnItem,
+			body.${COLUMN_LAYOUT_CLASS} .App-main > div > div:nth-of-type(3) .ContentItem-main {
+				width: ${COLUMN_LAYOUT_WIDTH} !important;
 				max-width: none !important;
 			}
 			.Post-Row-Content {
@@ -563,6 +594,67 @@
 		}
 	}
 
+	function modifyProfileLayout() {
+		const profileHeader = document.querySelector('.ProfileHeader');
+		if (profileHeader) {
+			profileHeader.style.setProperty('width', PROFILE_LAYOUT_WIDTH, 'important');
+			profileHeader.style.setProperty('max-width', 'none', 'important');
+		}
+
+		const profileMain = document.querySelector('.Profile-main');
+		if (profileMain) {
+			profileMain.style.setProperty('width', PROFILE_LAYOUT_WIDTH, 'important');
+			profileMain.style.setProperty('max-width', 'none', 'important');
+		}
+
+		document.querySelectorAll('.Profile-mainColumn').forEach(profileMainColumn => {
+			profileMainColumn.style.setProperty('width', '100%', 'important');
+			profileMainColumn.style.setProperty('max-width', 'none', 'important');
+		});
+	}
+
+	function modifyColumnLayout() {
+		const isColumnPage = window.location.pathname.startsWith('/column/');
+		document.body.classList.toggle(COLUMN_LAYOUT_CLASS, isColumnPage);
+		if (!isColumnPage) {
+			return;
+		}
+
+		const columnPageContainer = document.querySelector('.App-main > div');
+		if (!columnPageContainer) {
+			return;
+		}
+
+		const columnBlocks = Array.from(columnPageContainer.children)
+			.filter(element => element.tagName === 'DIV');
+		const columnIntro = columnBlocks[0] && Array.from(columnBlocks[0].children)
+			.find(element => element.tagName === 'DIV');
+		const columnTabsWrapper = columnBlocks[1];
+		const columnTabs = columnTabsWrapper && Array.from(columnTabsWrapper.children)
+			.filter(element => element.tagName === 'DIV')[1];
+		const columnContent = columnBlocks[2];
+
+		[columnIntro, columnTabs, columnContent].filter(Boolean).forEach(element => {
+			element.style.setProperty('width', COLUMN_LAYOUT_WIDTH, 'important');
+			element.style.setProperty('max-width', 'none', 'important');
+		});
+
+		const columnContentWidth = columnContent && columnContent.getBoundingClientRect().width;
+		if (!columnContentWidth) {
+			return;
+		}
+
+		columnContent.querySelectorAll('div, section, article, ul, ol, li').forEach(element => {
+			const maxWidth = window.getComputedStyle(element).maxWidth;
+			if (!maxWidth.endsWith('px') || Number.parseFloat(maxWidth) >= columnContentWidth) {
+				return;
+			}
+
+			element.style.setProperty('width', '100%', 'important');
+			element.style.setProperty('max-width', 'none', 'important');
+		});
+	}
+
 	function modifyPostLayout() {
 		if (!document.body.classList.contains('PostIndex-body')) {
 			return;
@@ -741,6 +833,8 @@
 		modifyContainer();
 		modifyQuestionMain();
 		modifyQuestionMainColumn();
+		modifyProfileLayout();
+		modifyColumnLayout();
 		modifyPostLayout();
 		modifyAppHeader();
 		applyHeaderNavVisibility();
