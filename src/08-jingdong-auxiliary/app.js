@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Jingdong Greener
+// @name         Jingdong Auxiliary
 // @namespace    http://tampermonkey.net/
 // @version      0.1.2
-// @description  Clean Jingdong URLs and remove floating promotions, coupon prompts, and ad containers
+// @description  jingdong 页面辅助脚本
 // @author       wkyuu
 // @match        https://jd.com/*
 // @match        https://*.jd.com/*
@@ -16,22 +16,27 @@
 (function () {
 	'use strict';
 
-	const STYLE_ID = 'jingdong-greener-style';
-	const SHARE_BUTTON_ID = 'jingdong-greener-share';
+	const STYLE_ID = 'jingdong-auxiliary-style';
+	const SHARE_BUTTON_ID = 'jingdong-auxiliary-share';
 	const REMOVAL_SELECTORS = [
+		'.jd_pc_search_bar_react_ai_search_wrap.jd_pc_search_bar_react_ai_search_wrap_right',
+		'.continuous-toggle.continuous-toggle--expanded',
 		'.umc-equity',
 		'#J_promotional-top',
 		'#J_event_lk',
 		'#single-background',
 		'#right-bottom-float-badge',
+		'#jingyanWrapper',
 		'#J_coupop',
 		'#J-global-toolbar',
+		'#treasure',
 		'.J-global-toolbar',
 		'.jdm-toolbar-wrap',
 		'.toolbar-wrap',
 		'.jdm-tbar-panel',
 		'.mod_coupon',
 		'.mod_actmark',
+		'.promo_second',
 		'.J_f',
 		'.J_event',
 		'.J_promWrap',

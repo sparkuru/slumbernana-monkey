@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Bilibili Greener
+// @name         Bilibili Auxiliary
 // @namespace    http://tampermonkey.net/
 // @version      0.1.0
-// @description  Clean Bilibili video URLs and copied share links
+// @description  bilibili 页面辅助脚本
 // @author       wkyuu
 // @match        https://bilibili.com/*
 // @match        https://www.bilibili.com/*

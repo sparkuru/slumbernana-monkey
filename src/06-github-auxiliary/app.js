@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         GitHub Greener
+// @name         GitHub Auxiliary
 // @namespace    http://tampermonkey.net/
 // @version      0.1.0
-// @description  Hide low-value GitHub dashboard feed items and noisy prompts
+// @description  github 页面辅助脚本
 // @author       wkyuu
 // @match        https://github.com/*
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=github.com
@@ -12,7 +12,7 @@
 (function () {
 	'use strict';
 
-	const STYLE_ID = 'github-greener-style';
+	const STYLE_ID = 'github-auxiliary-style';
 	const BLOCKED_ACCOUNTS = new Set([
 		'cheezcharmer',
 		'Dimples1337',
@@ -48,7 +48,7 @@
 		const style = document.createElement('style');
 		style.id = STYLE_ID;
 		style.textContent = `
-			[data-greener-hidden="true"],
+			[data-auxiliary-hidden="true"],
 			[data-testid="dashboard-changelog"],
 			[data-testid="dashboard-feed-filter"] {
 				display: none !important;
@@ -82,7 +82,7 @@
 		FEED_CARD_SELECTORS.forEach(selector => {
 			document.querySelectorAll(selector).forEach(card => {
 				if (cardContainsBlockedAccount(card)) {
-					card.dataset.greenerHidden = 'true';
+					card.dataset.auxiliaryHidden = 'true';
 				}
 			});
 		});
@@ -91,7 +91,7 @@
 	function hideNoisyElements() {
 		NOISY_SELECTORS.forEach(selector => {
 			document.querySelectorAll(selector).forEach(element => {
-				element.dataset.greenerHidden = 'true';
+				element.dataset.auxiliaryHidden = 'true';
 			});
 		});
 	}

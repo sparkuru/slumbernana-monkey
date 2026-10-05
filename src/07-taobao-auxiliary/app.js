@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Taobao Greener
+// @name         Taobao Auxiliary
 // @namespace    http://tampermonkey.net/
 // @version      0.2.1
-// @description  Clean Taobao item URLs and remove floating promotions, popups, and ad containers
+// @description  taobao 页面辅助脚本
 // @author       wkyuu
 // @match        https://taobao.com/*
 // @match        https://*.taobao.com/*
@@ -26,7 +26,7 @@
 	const SEARCH_PATH_PATTERN = /^\/search$/i;
 	const CUSTOMER_SERVICE_ENTRY_SELECTOR = '[data-name="webww2"]';
 	const CUSTOMER_SERVICE_URL = 'https://market.m.taobao.com/app/im/chat/index.html';
-	const SHARE_BUTTON_ID = 'taobao-greener-share';
+	const SHARE_BUTTON_ID = 'taobao-auxiliary-share';
 	const SEARCH_KEEP_PARAMS = [
 		'q',
 		'page',
@@ -37,7 +37,7 @@
 		'spm'
 	];
 	const DETAIL_CLEAN_DELAY_MS = 3000;
-	const STYLE_ID = 'taobao-greener-style';
+	const STYLE_ID = 'taobao-auxiliary-style';
 	const SKU_DECISION_SELECTOR = '[class^="SKUDecision--"], [class*=" SKUDecision--"]';
 	const REMOVAL_SELECTORS = [
 		'#J_TBPC_POP_home',

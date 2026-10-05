@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Goofish Greener
+// @name         Goofish Auxiliary
 // @namespace    http://tampermonkey.net/
 // @version      0.1.0
-// @description  Clean Goofish URLs, keep chat links working, and copy item share links
+// @description  goofish 页面辅助脚本
 // @author       wkyuu
 // @match        https://goofish.com/*
 // @match        https://*.goofish.com/*
@@ -20,9 +20,9 @@
 	const ITEM_PATH_PATTERN = /^\/item$/i;
 	const CHAT_PATH_PATTERN = /^\/im$/i;
 	const PERSONAL_PATH_PATTERN = /^\/personal$/i;
-	const SHARE_BUTTON_ID = 'goofish-greener-share';
+	const SHARE_BUTTON_ID = 'goofish-auxiliary-share';
 	const SURVEY_SELECTOR = '[class*="surveyWrap--"]';
-	const STYLE_ID = 'goofish-greener-style';
+	const STYLE_ID = 'goofish-auxiliary-style';
 	let normalizeTimer = null;
 	let shareButtonTimer = null;
 	let resetShareButtonTimer = null;
@@ -290,7 +290,7 @@
 		const button = document.createElement('button');
 		button.id = SHARE_BUTTON_ID;
 		button.type = 'button';
-		button.innerHTML = '<span class="goofish-greener-share-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 5l5 5-5 5M19 10H9a4 4 0 0 0-4 4v5"/></svg></span><span class="goofish-greener-share-text">分享</span>';
+		button.innerHTML = '<span class="goofish-auxiliary-share-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 5l5 5-5 5M19 10H9a4 4 0 0 0-4 4v5"/></svg></span><span class="goofish-auxiliary-share-text">分享</span>';
 		button.addEventListener('click', copyItemShareLink);
 		const itemCodeEntry = Array.from(sidebarItemsRoot.children).find(element => element.textContent?.includes('商品码'));
 		if (itemCodeEntry) {
@@ -349,7 +349,7 @@
 				width: 34px;
 			}
 
-			#${SHARE_BUTTON_ID} .goofish-greener-share-icon {
+			#${SHARE_BUTTON_ID} .goofish-auxiliary-share-icon {
 				align-items: center;
 				display: flex;
 				height: 26px;
@@ -368,7 +368,7 @@
 				width: 24px;
 			}
 
-			#${SHARE_BUTTON_ID} .goofish-greener-share-text {
+			#${SHARE_BUTTON_ID} .goofish-auxiliary-share-text {
 				align-items: center;
 				display: flex;
 				font-size: 12px;

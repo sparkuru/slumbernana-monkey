@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Zhihu Greener
+// @name         Zhihu Auxiliary
 // @namespace    http://tampermonkey.net/
 // @version      0.4.5
-// @description  Remove unnecessary content and optimize Zhihu interface display
+// @description  zhihu 页面辅助脚本
 // @author       wkyuu
 // @match        https://zhihu.com/*
 // @match        https://www.zhihu.com/*
@@ -18,11 +18,12 @@
 	const CONTAINER_WIDTH = '100vw';
 	const CONTENT_COLUMN_WIDTH = '80vw';
 	const PROFILE_LAYOUT_WIDTH = CONTENT_COLUMN_WIDTH;
-	const COLUMN_LAYOUT_CLASS = 'ZhihuGreener-columnPage';
+	const COLUMN_LAYOUT_CLASS = 'ZhihuAuxiliary-columnPage';
 	const COLUMN_LAYOUT_WIDTH = CONTENT_COLUMN_WIDTH;
 	const ARTICLE_IMAGE_WIDTH = '80%';
-	const NAV_SETTINGS_ID = 'zhihu-greener-nav-settings';
-	const NAV_SETTINGS_STORAGE_KEY = 'zhihu-greener-hidden-header-nav-items';
+	const NAV_SETTINGS_ID = 'zhihu-auxiliary-nav-settings';
+	const NAV_SETTINGS_STORAGE_KEY = 'zhihu-auxiliary-hidden-header-nav-items';
+	const LEGACY_NAV_SETTINGS_STORAGE_KEY = 'zhihu-greener-hidden-header-nav-items';
 	const HEADER_NAV_ITEMS = [
 		{ key: 'follow', label: '关注' },
 		{ key: 'recommend', label: '推荐' },
@@ -39,9 +40,9 @@
 		'--container-main-column-width': CONTENT_COLUMN_WIDTH,
 		'--right-sidebar-width': '0px'
 	};
-	const STYLE_ID = 'zhihu-greener-style';
+	const STYLE_ID = 'zhihu-auxiliary-style';
 	const ANSWER_ITEM_SELECTOR = '.ContentItem.AnswerItem, .AnswerItem[itemprop="answer"]';
-	const COPY_BUTTON_SELECTOR = '[data-zhihu-greener-copy-answer]';
+	const COPY_BUTTON_SELECTOR = '[data-zhihu-auxiliary-copy-answer]';
 	const INLINE_ZHIDA_LINK_SELECTOR = [
 		'.RichContent a[href*="//zhida.zhihu.com"]',
 		'.RichText a[href*="//zhida.zhihu.com"]',
@@ -131,8 +132,19 @@
 
 	function loadHiddenHeaderNavItems() {
 		try {
-			const storedItems = JSON.parse(window.localStorage.getItem(NAV_SETTINGS_STORAGE_KEY));
-			return Array.isArray(storedItems) ? new Set(storedItems) : new Set();
+			const currentValue = window.localStorage.getItem(NAV_SETTINGS_STORAGE_KEY);
+			const storedItems = JSON.parse(currentValue ?? window.localStorage.getItem(LEGACY_NAV_SETTINGS_STORAGE_KEY));
+			if (!Array.isArray(storedItems)) {
+				return new Set();
+			}
+			if (currentValue === null) {
+				try {
+					window.localStorage.setItem(NAV_SETTINGS_STORAGE_KEY, JSON.stringify(storedItems));
+				} catch {
+					// Keep legacy preferences usable when browser storage cannot be written.
+				}
+			}
+			return new Set(storedItems);
 		} catch {
 			return new Set();
 		}
@@ -252,10 +264,10 @@
 			.SearchBar-askContainer {
 				display: none !important;
 			}
-			.ZhihuGreener-copyButton {
+			.ZhihuAuxiliary-copyButton {
 				margin-left: 20px !important;
 			}
-			.ZhihuGreener-hiddenHeaderNav {
+			.ZhihuAuxiliary-hiddenHeaderNav {
 				display: none !important;
 			}
 			#${NAV_SETTINGS_ID} {
@@ -273,7 +285,7 @@
 				cursor: pointer;
 				padding: 8px 12px;
 			}
-			#${NAV_SETTINGS_ID} .ZhihuGreener-navPanel {
+			#${NAV_SETTINGS_ID} .ZhihuAuxiliary-navPanel {
 				display: none;
 				position: absolute;
 				right: 0;
@@ -284,10 +296,10 @@
 				background: #fff;
 				box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
 			}
-			#${NAV_SETTINGS_ID}.is-open .ZhihuGreener-navPanel {
+			#${NAV_SETTINGS_ID}.is-open .ZhihuAuxiliary-navPanel {
 				display: block;
 			}
-			#${NAV_SETTINGS_ID} .ZhihuGreener-navPanel label {
+			#${NAV_SETTINGS_ID} .ZhihuAuxiliary-navPanel label {
 				display: flex;
 				align-items: center;
 				gap: 6px;
@@ -461,7 +473,7 @@
 		document.querySelectorAll('.AppHeader nav a').forEach(link => {
 			const item = HEADER_NAV_ITEMS.find(candidate => link.textContent.trim().startsWith(candidate.label));
 			if (item) {
-				link.classList.toggle('ZhihuGreener-hiddenHeaderNav', hiddenHeaderNavItems.has(item.key));
+				link.classList.toggle('ZhihuAuxiliary-hiddenHeaderNav', hiddenHeaderNavItems.has(item.key));
 			}
 		});
 	}
@@ -479,7 +491,7 @@
 		toggleButton.setAttribute('aria-expanded', 'false');
 
 		const panel = document.createElement('div');
-		panel.className = 'ZhihuGreener-navPanel';
+		panel.className = 'ZhihuAuxiliary-navPanel';
 		const allItemsLabel = document.createElement('label');
 		const allItemsToggle = document.createElement('input');
 		allItemsToggle.type = 'checkbox';
@@ -788,8 +800,8 @@
 	function createCopyButton() {
 		const button = document.createElement('button');
 		button.type = 'button';
-		button.className = 'Button ContentItem-action Button--plain Button--withLabel ZhihuGreener-copyButton';
-		button.dataset.zhihuGreenerCopyAnswer = 'true';
+		button.className = 'Button ContentItem-action Button--plain Button--withLabel ZhihuAuxiliary-copyButton';
+		button.dataset.zhihuAuxiliaryCopyAnswer = 'true';
 		button.textContent = '复制';
 		button.addEventListener('click', copyAnswerText);
 		return button;
@@ -823,7 +835,7 @@
 		});
 	}
 
-	function greenZhihu() {
+	function optimizePage() {
 		removeUnwantedElements();
 		removeSignFlowModals();
 		modifySearchContainer();
@@ -843,21 +855,21 @@
 		addAnswerCopyButtons();
 	}
 
-	function scheduleGreening() {
+	function scheduleOptimization() {
 		if (optimizeTimer) {
 			return;
 		}
 
 		optimizeTimer = setTimeout(() => {
 			optimizeTimer = null;
-			greenZhihu();
+			optimizePage();
 		}, 100);
 	}
 
-	function initializeGreener() {
+	function initializeAuxiliary() {
 		injectCustomCSS();
 		removeCopyWatermark();
-		greenZhihu();
+		optimizePage();
 		startObserver();
 	}
 
@@ -889,7 +901,7 @@
 			});
 
 			if (shouldOptimize) {
-				scheduleGreening();
+				scheduleOptimization();
 			}
 		});
 
@@ -902,9 +914,9 @@
 	}
 
 	if (document.readyState === 'loading') {
-		document.addEventListener('DOMContentLoaded', initializeGreener);
+		document.addEventListener('DOMContentLoaded', initializeAuxiliary);
 	} else {
-		initializeGreener();
+		initializeAuxiliary();
 	}
 
 })();
