@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Taobao Auxiliary
 // @namespace    http://tampermonkey.net/
-// @version      0.2.2
+// @version      0.2.3
 // @description  taobao 页面辅助脚本
 // @author       wkyuu
 // @match        https://taobao.com/*
@@ -202,6 +202,22 @@
 		}
 	}
 
+	function redirectMappedItem() {
+		if (!isItemDetailUrl(window.location.href)) {
+			return false;
+		}
+
+		const itemId = String(window.__ICE_APP_CONTEXT__?.loaderData?.home?.data?.res?.item?.itemId || '');
+		const url = new URL(window.location.href);
+		if (!ITEM_ID_PATTERN.test(itemId) || itemId === url.searchParams.get('id')) {
+			return false;
+		}
+
+		// 活动入口 ID 可能映射到另一商品；重新加载才能同步淘宝缓存的加购参数。
+		window.location.replace(buildCleanItemUrl(url.origin, itemId, url.searchParams.get('skuId')));
+		return true;
+	}
+
 	function getCustomerServiceContext() {
 		const itemData = window.__ICE_APP_CONTEXT__?.loaderData?.home?.data?.res;
 		const trigger = document.querySelector('#aliww-click-trigger, #aliww-click-trigger-new');
@@ -355,6 +371,10 @@
 	}
 
 	function normalizeAddressBar() {
+		if (redirectMappedItem()) {
+			return;
+		}
+
 		const cleanUrl = getCleanUrl(window.location.href);
 		if (cleanUrl === window.location.href) {
 			return;
@@ -443,7 +463,7 @@
 		const style = document.createElement('style');
 		style.id = STYLE_ID;
 		style.textContent = `
-			${REMOVAL_SELECTORS.join(',\n\t\t\t')} {
+			${REMOVAL_SELECTORS.concat(SKU_DECISION_SELECTOR).join(',\n\t\t\t')} {
 				display: none !important;
 			}
 
@@ -521,10 +541,6 @@
 		document.head.appendChild(style);
 	}
 
-	function removeSkuDecision() {
-		document.querySelectorAll(SKU_DECISION_SELECTOR).forEach(element => element.remove());
-	}
-
 	function removeElements() {
 		REMOVAL_SELECTORS.forEach(selector => {
 			document.querySelectorAll(selector).forEach(element => element.remove());
@@ -547,8 +563,11 @@
 	}
 
 	function cleanup() {
+		if (redirectMappedItem()) {
+			return;
+		}
+
 		normalizeLinks();
-		removeSkuDecision();
 		removeElements();
 		removeFixedQrPopups();
 		installShareButton();
