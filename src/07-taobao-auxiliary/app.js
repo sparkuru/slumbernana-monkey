@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Taobao Auxiliary
 // @namespace    http://tampermonkey.net/
-// @version      0.2.1
+// @version      0.2.2
 // @description  taobao 页面辅助脚本
 // @author       wkyuu
 // @match        https://taobao.com/*
@@ -21,7 +21,7 @@
 	const SKU_ID_PATTERN = /^\d+$/;
 	const TAOBAO_HOST_PATTERN = /(^|\.)taobao\.com$/i;
 	const TMALL_HOST_PATTERN = /(^|\.)tmall\.com$/i;
-	const SIMBA_CLICK_HOST_PATTERN = /^click(?:\.[a-z0-9-]+)*\.simba\.taobao\.com$/i;
+	const SIMBA_CLICK_HOST_PATTERN = /^m?click(?:\.[a-z0-9-]+)*\.simba\.taobao\.com$/i;
 	const SIMBA_CLICK_PATH_PATTERN = /^\/(?:cc_im|necpm)$/i;
 	const SEARCH_PATH_PATTERN = /^\/search$/i;
 	const CUSTOMER_SERVICE_ENTRY_SELECTOR = '[data-name="webww2"]';

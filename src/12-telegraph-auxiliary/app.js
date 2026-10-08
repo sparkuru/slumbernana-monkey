@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Telegraph Auxiliary
 // @namespace    http://tampermonkey.net/
-// @version      0.1.0
+// @version      0.1.1
 // @description  telegraph 页面辅助脚本
 // @author       wkyuu
 // @match        https://telegra.ph/*
 // @require      https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js
 // @grant        GM_xmlhttpRequest
+// @grant        GM_download
 // @grant        GM_registerMenuCommand
 // @connect      *
 // @run-at       document-idle
@@ -154,6 +155,46 @@
 		});
 	}
 
+	function downloadArchive(blob, name, signal) {
+		return new Promise((resolve, reject) => {
+			if (signal.aborted) { reject(abortError()); return; }
+			if (typeof GM_download !== 'function') {
+				reject(new Error('脚本管理器未提供下载接口，请更新脚本或手动保存'));
+				return;
+			}
+			const errors = {
+				not_enabled: '脚本管理器的下载功能未启用',
+				not_whitelisted: '脚本管理器未允许下载 .zip 文件',
+				not_permitted: '脚本管理器未获得浏览器下载权限',
+				not_supported: '当前浏览器或脚本管理器不支持此下载方式',
+				not_succeeded: '下载未启动、被取消或保存失败'
+			};
+			let request;
+			let settled = false;
+			const finish = (callback, value) => {
+				if (settled) return;
+				settled = true;
+				signal.removeEventListener('abort', cancel);
+				callback(value);
+			};
+			const cancel = () => {
+				finish(reject, abortError());
+				request?.abort();
+			};
+			signal.addEventListener('abort', cancel, { once: true });
+			try {
+				request = GM_download({
+					url: blob, name, saveAs: true,
+					onload: () => finish(resolve),
+					onerror: error => finish(reject, new Error(errors[error?.error] || error?.error || '保存失败')),
+					ontimeout: () => finish(reject, new Error('保存超时'))
+				});
+			} catch (error) {
+				finish(reject, error);
+			}
+		});
+	}
+
 	function createToolbar() {
 		const panel = document.createElement('div');
 		panel.id = PANEL_ID;
@@ -246,6 +287,7 @@
 			`;
 			let activeController = null;
 			let archiveUrl = null;
+			let archiveSummary = '';
 			const setStatus = section.setStatus;
 
 			function captureArchive() {
@@ -417,8 +459,23 @@
 			function releaseArchive() {
 				if (archiveUrl) URL.revokeObjectURL(archiveUrl);
 				archiveUrl = null;
+				archiveSummary = '';
 				ui.save.hidden = true;
 				ui.save.removeAttribute('href');
+			}
+
+			function saveArchiveManually(event) {
+				event.preventDefault();
+				if (!archiveUrl) return;
+				// Keep the fallback in the click handler so it retains the user's activation.
+				const link = context.page.document.createElement('a');
+				link.href = archiveUrl;
+				link.download = ui.save.download;
+				link.hidden = true;
+				context.page.document.body.append(link);
+				link.click();
+				link.remove();
+				setStatus(`已请求浏览器保存 ZIP，请检查下载列表或保存对话框。${archiveSummary}`);
 			}
 
 			async function saveCurrentPage() {
@@ -445,17 +502,27 @@
 					}, progress => {
 						setStatus(`打包中 ${Math.floor(progress.percent)}%`);
 					});
+					if (controller.signal.aborted) throw abortError();
 					archiveUrl = URL.createObjectURL(blob);
 					ui.save.href = archiveUrl;
 					ui.save.download = `${name}.zip`;
 					ui.save.hidden = false;
-					ui.save.click();
 					const failures = page.images.filter(image => image.error).length;
-					setStatus(failures
-						? `ZIP 已生成；${failures}/${page.images.length} 张图片失败，详见包内清单。`
-						: `ZIP 已生成，已保存 ${page.images.length} 张图片。`);
+					archiveSummary = failures
+						? `${failures}/${page.images.length} 张图片未能归档，详见包内清单。`
+						: `包内包含 ${page.images.length} 张图片。`;
+					ui.cancel.hidden = false;
+					setStatus(`ZIP 已生成，正在请求保存，请留意保存对话框。${archiveSummary}`);
+					await downloadArchive(blob, `${name}.zip`, controller.signal);
+					setStatus(`ZIP 下载完成：${name}.zip。${archiveSummary}`);
 				} catch (error) {
-					setStatus(error.name === 'AbortError' ? '已取消下载。' : `保存失败：${error.message || error}`);
+					if (error.name === 'AbortError') {
+						setStatus(archiveUrl ? '已取消自动保存；ZIP 已保留，可点击“手动保存 ZIP”。' : '已取消下载。');
+					} else {
+						setStatus(archiveUrl
+							? `ZIP 已生成，但自动保存失败：${error.message || error}。请点击“手动保存 ZIP”。${archiveSummary}`
+							: `保存失败：${error.message || error}`);
+					}
 				} finally {
 					activeController = null;
 					ui.download.disabled = false;
@@ -466,8 +533,9 @@
 			const ui = {
 				download: section.addButton('下载本页 ZIP', saveCurrentPage, { className: 'download' }),
 				cancel: section.addButton('取消', () => activeController?.abort(), { className: 'cancel secondary', hidden: true }),
-				save: section.addLink('保存 ZIP', { className: 'save', hidden: true })
+				save: section.addLink('手动保存 ZIP', { className: 'save', hidden: true })
 			};
+			ui.save.addEventListener('click', saveArchiveManually);
 			setStatus('保存正文、图片与来源信息');
 			GM_registerMenuCommand('下载当前 Telegraph 页面 ZIP', saveCurrentPage);
 			return {
